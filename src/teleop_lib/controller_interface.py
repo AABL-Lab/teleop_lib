@@ -12,7 +12,7 @@ import numpy as np
 from input_profile import InputProfile
 
 class ControllerInterface:
-    def __init__(self, profile="default", estop_index=0):
+    def __init__(self, profile="default", linear_scale=1, angular_scale=1, deadzone=1, estop_index=0):
         rospy.init_node('controller_interface', anonymous=True)
         self.profile = profile
         self.input_profile = InputProfile(name=profile)
