@@ -7,8 +7,10 @@
     of how the joystick input should be mapped to the
     cartesian command. 
 
-    #TODO: Add a way to switch between input profiles via
-    dynamic reconfigure.
+    
+    The "profile" parameter is an integer that specifies the control mode.
+    Higher level names are available through dynamic reconfigure or
+    the InputProfiles.cfg file.
 """
 
 import rospy
@@ -18,7 +20,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray
 import dynamic_reconfigure
 
-profile = "default"
+profile = 0
 linear_scale = 1
 angular_scale = 1
 deadzone = .05
