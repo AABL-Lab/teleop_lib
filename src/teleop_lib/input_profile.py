@@ -11,6 +11,9 @@
     The "profile" parameter is an integer that specifies the control mode.
     Higher level names are available through dynamic reconfigure or
     the InputProfiles.cfg file.
+
+    #TODO: The profiles should change which direction affects which velocity
+    of the robot's eef. 
 """
 
 import rospy
@@ -61,8 +64,8 @@ class InputProfile:
             joy_z = 0
 
         # Scale the joystick input
-        self.twist_msg.linear.x = joy_y * self.linear_scale
-        self.twist_msg.linear.y = joy_x * self.linear_scale
+        self.twist_msg.linear.x = joy_x * self.linear_scale
+        self.twist_msg.linear.y = joy_y * self.linear_scale
         self.twist_msg.angular.z = joy_z * self.angular_scale
 
         # Publish the twist message
