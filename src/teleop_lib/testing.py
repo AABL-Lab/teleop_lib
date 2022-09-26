@@ -2,10 +2,9 @@
 
 from math import radians
 from controller_interface import ControllerInterface
-from gen3_testing.gen3_movement_utils import Arm
-import rospy
+from gen3_movement_utils import Arm
 import numpy as np
-
+import rospy
 
 try:
     rospy.init_node('controller_testing', anonymous=True)
