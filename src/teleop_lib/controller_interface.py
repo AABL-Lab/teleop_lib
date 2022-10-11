@@ -70,11 +70,15 @@ class ControllerInterface:
         self.dynamic_callback.update_configuration(({"profile":self.profile, "linear_scale":self.linear_scale, \
             "angular_scale":self.angular_scale, "deadzone":self.deadzone}))        
 
-    def get_user_command(self):
+    def get_user_command(self, as_list=False):
         """
             Function to get the user command from the controller augmented by the input profile.
         """
-        return self.latest_commmad
+        if not as_list:
+            return self.latest_commmad
+        else:
+            return [self.latest_commmad.linear.x, self.latest_commmad.linear.y, self.latest_commmad.linear.z, \
+                self.latest_commmad.angular.x, self.latest_commmad.angular.y, self.latest_commmad.angular.z]
 
     def get_user_buttons(self):
         """
