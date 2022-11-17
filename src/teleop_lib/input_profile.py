@@ -18,86 +18,117 @@
 
 import rospy
 import numpy as np
-from sensor_msgs.msg import Joy
+import yaml
+
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Int32MultiArray
-import dynamic_reconfigure.client
 
-profile = 0
-linear_scale = 1
-angular_scale = 1
-deadzone = .05
+from teleop_lib.msg import RobotCommand
 
-def update_parameters(config):
-    global profile, linear_scale, angular_scale, deadzone
-    profile = config["profile"]
-    linear_scale = config["linear_scale"]
-    angular_scale = config["angular_scale"]
-    deadzone = config["deadzone"]
 
-class InputProfile:
-    def __init__(self):
-        # self.name = name
-        # self.linear_scale = linear_scale
-        # self.angular_scale = angular_scale
-        # self.deadzone = deadzone
-        self.rate = 1000
-        self.joy_sub = rospy.Subscriber("joy", Joy, self.joy_callback)
-        self.twist_pub = rospy.Publisher("joy_command", Twist, queue_size=10)
-        self.twist_msg = Twist()
 
-        # Adding higher level button publisher
-        self.button_pub = rospy.Publisher("joy_button", Int32MultiArray, queue_size=10)
-        #self.dynamic_client = dynamic_reconfigure.client.Client("teleop_lib", config_callback=update_parameters)
+class TwistAxes:
+    _registry = {}
+    def __init__(self, setter):
+        self._name = setter.__name__
+        self._setter = setter
+        if self._name in TwistAxes._registry:
+            raise ValueError("Cannot reuse name")
+        TwistAxes._registry[self._name] = self
+    def __call__(self, msg, val):
+        self._setter(msg, val)
+    def __repr__(self):
+        return self._name
 
-    def joy_callback(self, data):
-        global profile, linear_scale, angular_scale, deadzone
-        # Get the joystick input
-        joy_x = data.axes[0]
-        joy_y = data.axes[1]
-        #joy_z = data.axes[2]
-        joy_z = data.axes[4]
+    @staticmethod
+    def get(self, name):
+        return TwistAxes.registry[name]
 
-        joy_theta_x = 0
-        joy_theta_y = data.axes[3]
-        joy_theta_z = 0
-        # Apply the deadzone
-        if abs(joy_x) < deadzone:
-            joy_x = 0
-        if abs(joy_y) < deadzone:
-            joy_y = 0
-        if abs(joy_z) < deadzone:
-            joy_z = 0
-        if abs(joy_theta_x) < deadzone:
-            joy_theta_x = 0
-        if abs(joy_theta_y) < deadzone:
-            joy_theta_y = 0
-        if abs(joy_theta_z) < deadzone:
-            joy_theta_z = 0
+    @TwistAxes.__init__
+    def AXIS_X(msg, val):
+        msg.linear.x = val
+    @TwistAxes.__init__
+    def AXIS_Y(msg, val):
+        msg.linear.y = val
+    @TwistAxes.__init__
+    def AXIS_Z(msg, val):
+        msg.linear.z = val
+    @TwistAxes.__init__
+    def AXIS_ROLL(msg, val):
+        msg.angular.roll = val
+    @TwistAxes.__init__
+    def AXIS_PITCH(msg, val):
+        msg.angular.pitch = val
+    @TwistAxes.__init__
+    def AXIS_YAW(msg, val):
+        msg.angular.yaw = val
 
-        # Scale the joystick input
-        self.twist_msg.linear.x = joy_x * linear_scale
-        self.twist_msg.linear.y = joy_y * linear_scale
-        self.twist_msg.linear.z = joy_z * angular_scale
-        self.twist_msg.angular.x = joy_theta_x * angular_scale
-        self.twist_msg.angular.y = joy_theta_y * angular_scale
-        self.twist_msg.angular.z = joy_theta_z * angular_scale
+    @staticmethod
+    def axis_representer(dumper, data):
+        return dumper.represent_scalar("!!str", str(data))
+yaml.add_representer(TwistAxes, TwistAxes.axis_representer)
 
-        # Publish the twist message
-        self.twist_pub.publish(self.twist_msg)
-        buttons = Int32MultiArray()
-        buttons.data = data.buttons
-        #print(buttons.data)
-        self.button_pub.publish(buttons)
 
-    # def run(self):
-    #     while not rospy.is_shutdown():
-    #         self.rate.sleep()
+    
 
-if __name__ == '__main__':
-    try:   
-        rospy.init_node('input_profile', anonymous=False)
-        controller_interface = InputProfile()
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
+"""
+EXAMPLE_FIXED_INPUT_MAP = {
+    "axes":
+        (
+            { 
+                "output": TwistAxes.AXIS_X,
+                "scale": 1,
+                "deadzone": 0.05
+                },
+            { 
+                "output": TwistAxes.AXIS_Y,
+                "scale": 1,
+                "deadzone": 0.05
+                },
+            { 
+                "output": TwistAxes.AXIS_Z,
+                "scale": 1,
+                "deadzone": 0.05
+                }
+        ),
+    "buttons":
+        (
+            {
+                "output": RobotCommand.STOP_COMMAND,
+                "is_active": bool
+            }
+        )
+}
+"""
+
+class FixedInputMap:
+    def __init__(self, config):
+        self._config = config
+
+    def process_input(self, joy):
+        cmd = RobotCommand()
+
+        for ax, cfg in zip(joy.axes, self._config["axes"]):
+            if "output" not in cfg:
+                continue
+            if np.abs(ax) < cfg.get("deadzone", 0):
+                val = 0
+            else:
+                val = ax * cfg.get("scale", 1)
+            cfg["output"](cmd.twist, ax*cfg.get("scale", 1))
+
+        for btn, cfg in zip(joy.buttons, self._config["buttons"]):
+            if "output" in cfg and cfg.get("is_active", bool)(btn):
+                cmd.command = cfg["output"]
+
+        return cmd
+
+class ModalControlMap:
+    def __init__(self, modes):
+        self._modes = modes
+        self._mode = 0
+
+    def process_input(self, joy):
+        cmd = self._modes[self._mode].process_input(joy)
+        if cmd.command == RobotCommand.CHANGE_MODE_COMMAND:
+            self._mode = (self._mode + 1) % len(self._modes)
+        return cmd
