@@ -16,57 +16,46 @@
     of the robot's eef. 
 """
 
-import rospy
 import numpy as np
 import yaml
-
-from geometry_msgs.msg import Twist
 
 from teleop_lib.msg import RobotCommand
 
 
-
-class TwistAxes:
-    _registry = {}
+class TwistAxis:
     def __init__(self, setter):
         self._name = setter.__name__
         self._setter = setter
-        if self._name in TwistAxes._registry:
-            raise ValueError("Cannot reuse name")
-        TwistAxes._registry[self._name] = self
+        if hasattr(type(self), self._name):
+            raise ValueError("cannot repeat name")
+        setattr(type(self), self._name, self)
     def __call__(self, msg, val):
         self._setter(msg, val)
     def __repr__(self):
         return self._name
-
-    @staticmethod
-    def get(self, name):
-        return TwistAxes.registry[name]
-
-    @TwistAxes.__init__
-    def AXIS_X(msg, val):
-        msg.linear.x = val
-    @TwistAxes.__init__
-    def AXIS_Y(msg, val):
-        msg.linear.y = val
-    @TwistAxes.__init__
-    def AXIS_Z(msg, val):
-        msg.linear.z = val
-    @TwistAxes.__init__
-    def AXIS_ROLL(msg, val):
-        msg.angular.roll = val
-    @TwistAxes.__init__
-    def AXIS_PITCH(msg, val):
-        msg.angular.pitch = val
-    @TwistAxes.__init__
-    def AXIS_YAW(msg, val):
-        msg.angular.yaw = val
-
     @staticmethod
     def axis_representer(dumper, data):
-        return dumper.represent_scalar("!!str", str(data))
-yaml.add_representer(TwistAxes, TwistAxes.axis_representer)
+        return dumper.represent_str(str(data))
+yaml.add_representer(TwistAxis, TwistAxis.axis_representer)
 
+@TwistAxis
+def AXIS_X(msg, val):
+    msg.linear.x = val
+@TwistAxis
+def AXIS_Y(msg, val):
+    msg.linear.y = val
+@TwistAxis
+def AXIS_Z(msg, val):
+    msg.linear.z = val
+@TwistAxis
+def AXIS_ROLL(msg, val):
+    msg.angular.roll = val
+@TwistAxis
+def AXIS_PITCH(msg, val):
+    msg.angular.pitch = val
+@TwistAxis
+def AXIS_YAW(msg, val):
+    msg.angular.yaw = val
 
     
 
@@ -93,8 +82,7 @@ EXAMPLE_FIXED_INPUT_MAP = {
     "buttons":
         (
             {
-                "output": RobotCommand.STOP_COMMAND,
-                "is_active": bool
+                "output": RobotCommand.STOP_COMMAND
             }
         )
 }
@@ -114,10 +102,11 @@ class FixedInputMap:
                 val = 0
             else:
                 val = ax * cfg.get("scale", 1)
-            cfg["output"](cmd.twist, ax*cfg.get("scale", 1))
+            print(cfg["output"].__class__)
+            cfg["output"](cmd.twist, val)
 
         for btn, cfg in zip(joy.buttons, self._config["buttons"]):
-            if "output" in cfg and cfg.get("is_active", bool)(btn):
+            if "output" in cfg and btn:
                 cmd.command = cfg["output"]
 
         return cmd
@@ -132,3 +121,37 @@ class ModalControlMap:
         if cmd.command == RobotCommand.CHANGE_MODE_COMMAND:
             self._mode = (self._mode + 1) % len(self._modes)
         return cmd
+
+def load_input_map(stream):
+    config = yaml.load(stream)
+    if "axes" not in config:
+        config["axes"] = []
+    if "buttons" not in config:
+        config["buttons"] = []
+
+    for ax in config["axes"]:
+        output = ax.get("output", None)
+        if isinstance(output, str):
+            print(output)
+            ax["output"] = getattr(TwistAxis, output)
+            print(ax["output"])
+
+    for btn in config["buttons"]:
+        output = btn.get("output", None)
+        if isinstance(output, str):
+            btn["output"] = getattr(RobotCommand, output)
+        
+    
+    return FixedInputMap(config)
+
+
+
+if __name__ == "__main__":
+    import sensor_msgs.msg
+    joy = sensor_msgs.msg.Joy(axes=[0.3, -3], buttons=[1, 0])
+    with open("../../data/XYMode.yaml") as f:
+        mode = load_input_map(f)
+    print("----")
+    print(mode._config)
+    print(joy)
+    print(mode.process_input(joy))
