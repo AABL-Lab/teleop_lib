@@ -23,19 +23,31 @@ from teleop_lib.msg import RobotCommand
 
 
 class TwistAxis:
+    __registry = {}
     def __init__(self, setter):
         self._name = setter.__name__
         self._setter = setter
         if hasattr(type(self), self._name):
             raise ValueError("cannot repeat name")
         setattr(type(self), self._name, self)
+        self.__class__.__registry[self._name] = self
+
     def __call__(self, msg, val):
         self._setter(msg, val)
     def __repr__(self):
         return self._name
+
+    @classmethod
+    def get(cls, name):
+        return cls.__registry[name]
+    @classmethod
+    def list(cls, name):
+        return cls.__registry.keys()
+
     @staticmethod
     def axis_representer(dumper, data):
         return dumper.represent_str(str(data))
+        
 yaml.add_representer(TwistAxis, TwistAxis.axis_representer)
 
 @TwistAxis
@@ -131,17 +143,19 @@ def load_input_map(stream):
 
     for ax in config["axes"]:
         output = ax.get("output", None)
-        if isinstance(output, str):
-            print(output)
-            ax["output"] = getattr(TwistAxis, output)
-            print(ax["output"])
+        try:
+            axis = TwistAxis.get(output)
+        except ValueError:
+            # todo: logwarn; but we don't have a rospy dep 
+            axis = None
+            pass
+        ax["output"] = axis
 
     for btn in config["buttons"]:
         output = btn.get("output", None)
         if isinstance(output, str):
             btn["output"] = getattr(RobotCommand, output)
-        
-    
+
     return FixedInputMap(config)
 
 
