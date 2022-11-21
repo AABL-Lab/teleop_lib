@@ -100,7 +100,7 @@ EXAMPLE_FIXED_INPUT_MAP = {
 }
 """
 
-class FixedInputMap:
+class FixedInputProfile:
     def __init__(self, config):
         self._config = config
 
@@ -108,7 +108,7 @@ class FixedInputMap:
         cmd = RobotCommand()
 
         for ax, cfg in zip(joy.axes, self._config["axes"]):
-            if "output" not in cfg:
+            if "output" not in cfg or cfg["output"] is None:
                 continue
             if np.abs(ax) < cfg.get("deadzone", 0):
                 val = 0
@@ -118,7 +118,9 @@ class FixedInputMap:
             cfg["output"](cmd.twist, val)
 
         for btn, cfg in zip(joy.buttons, self._config["buttons"]):
-            if "output" in cfg and btn:
+            if "output" not in cfg or cfg["output"] is None:
+                continue
+            if btn:
                 cmd.command = cfg["output"]
 
         return cmd
@@ -134,8 +136,7 @@ class ModalControlMap:
             self._mode = (self._mode + 1) % len(self._modes)
         return cmd
 
-def load_input_map(stream):
-    config = yaml.load(stream)
+def build_profile(config):
     if "axes" not in config:
         config["axes"] = []
     if "buttons" not in config:
@@ -145,18 +146,19 @@ def load_input_map(stream):
         output = ax.get("output", None)
         try:
             axis = TwistAxis.get(output)
-        except ValueError:
-            # todo: logwarn; but we don't have a rospy dep 
+        except KeyError:
             axis = None
             pass
         ax["output"] = axis
 
     for btn in config["buttons"]:
         output = btn.get("output", None)
-        if isinstance(output, str):
+        try:
             btn["output"] = getattr(RobotCommand, output)
+        except AttributeError:
+            btn["output"] = None
 
-    return FixedInputMap(config)
+    return FixedInputProfile(config)
 
 
 
@@ -164,7 +166,8 @@ if __name__ == "__main__":
     import sensor_msgs.msg
     joy = sensor_msgs.msg.Joy(axes=[0.3, -3], buttons=[1, 0])
     with open("../../data/XYMode.yaml") as f:
-        mode = load_input_map(f)
+        cfg = yaml.safe_load(f)
+    mode = build_profile(cfg)
     print("----")
     print(mode._config)
     print(joy)
