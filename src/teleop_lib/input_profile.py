@@ -41,8 +41,8 @@ class TwistAxis:
     def get(cls, name):
         return cls.__registry[name]
     @classmethod
-    def list(cls, name):
-        return cls.__registry.keys()
+    def list(cls):
+        return list(cls.__registry.keys())
 
     @staticmethod
     def axis_representer(dumper, data):
