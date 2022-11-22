@@ -160,23 +160,25 @@ class InputEditor(tkinter.Frame):
 class ProfileBuilder(tkinter.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        self.grid()
 
         self._data_frame = tkinter.Frame(self)
-        self._data_frame.pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=True)
+        self._data_frame.grid(row=0, column=0, sticky="NEW")
 
         self._label = tkinter.Label(self._data_frame, text="Waiting for first message...")
-        self._label.pack()
+        self._label.grid()
 
         self._button_frame = tkinter.Frame(self)
-        self._button_frame.pack(side=tkinter.BOTTOM, fill=tkinter.X, expand=True)
+        self._button_frame.grid(row=1, column=0, sticky="SEW")
 
         self._plugin = None
         self._plugin_var = tkinter.StringVar
         self._plugin_selector = tkinter.ttk.Combobox(self._button_frame, values=teleop_lib.plugins.list_plugins()+[""], textvariable=self._plugin_var)
         self._plugin_selector.bind("<<ComboboxSelected>>", self._update_plugin)
+        self._plugin_selector.grid(row=0)
 
         self._save_button = tkinter.Button(self._button_frame, text="Save", command=self._save)
-        self._save_button.pack(side=tkinter.TOP)
+        self._save_button.grid(row=0, column=1)
 
         self._axes_editor = None
         self._button_editor = None
@@ -277,7 +279,7 @@ if __name__ == "__main__":
     profile_builder._plugin = teleop_lib.plugins.get_plugin("publisher")()
 
 
-    # root.mainloop()
+    root.mainloop()
         
 
 
