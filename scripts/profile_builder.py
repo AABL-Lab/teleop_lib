@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import queue
 import rospy
 from sensor_msgs.msg import Joy
 import threading
@@ -39,22 +40,26 @@ class AxisEditor:
         self._deadzone.grid(column=3, row=self._index)
         self._deadzone.bind("<Key-Return>", self._updated)
 
+    ## definitely unnecessary haxx
+    def after(self, *args):
+        self._label.master.after(*args)
+
     def _updated(self, _):
         self._cb(self._index)
 
     def update(self, val):
-        lbl = "Axis {self._index}: {val:.04f}"
+        lbl = f"Axis {self._index}: {val:.04f}"
         if self._labelvar.get() != lbl:
             self._labelvar.set(lbl)
             return True
         else:
             return False
     
-    def configure(self, style):
-        self._label.configure(style=style)
-        self._selector.configure(style=style)
-        self._scale.configure(style=style)
-        self._deadzone.configure(style=style)
+    def configure(self, **kwargs):
+        self._label.configure(**kwargs)
+        self._selector.configure(**kwargs)
+        self._scale.configure(**kwargs)
+        self._deadzone.configure(**kwargs)
 
     def get_config(self):
         return {
@@ -78,6 +83,10 @@ class ButtonEditor:
         self._selector.grid(column=1, row=self._index)
         self._selector.bind("<<ComboboxSelected>>", self._updated)
 
+    ## definitely unnecessary haxx
+    def after(self, *args):
+        self._label.master.after(*args)
+
     def _updated(self, _):
         self._cb(self._index)
 
@@ -90,17 +99,39 @@ class ButtonEditor:
         else:
             return False
     
-    def configure(self, style):
-        self._label.configure(style=style)
-        self._selector.configure(style=style)
+    def configure(self, **kwargs):
+        self._label.configure(**kwargs)
+        self._selector.configure(**kwargs)
 
     def get_config(self):
         return {
             "output": self._outputvar.get()
         }
 
+DEFAULT_BG = (0xd9, 0xd9, 0xd9)
+HIGHLIGHT_BG = (0xF0, 0x80, 0x00)
+HIGHLIGHT_RATE = 50 # ms
+HIGHLIGHT_TIME = 2000 # total ms
+
+def _update_highlight(item):
+    if item._highlight_val < HIGHLIGHT_RATE/HIGHLIGHT_TIME:
+        item._highlight_val = 0
+    r = int(DEFAULT_BG[0]*(1-item._highlight_val) + HIGHLIGHT_BG[0]*item._highlight_val)
+    g = int(DEFAULT_BG[1]*(1-item._highlight_val) + HIGHLIGHT_BG[1]*item._highlight_val)
+    b = int(DEFAULT_BG[2]*(1-item._highlight_val) + HIGHLIGHT_BG[2]*item._highlight_val)
+    item.configure(background=f"#{r:02x}{g:02x}{b:02x}")
+    item._highlight_val -= HIGHLIGHT_RATE/HIGHLIGHT_TIME
+    if item._highlight_val >= 0:
+        item.after(HIGHLIGHT_RATE, lambda: _update_highlight(item))
+    else:
+        delattr(item, '_highlight_val')
+
+
 def highlight(item):
-    pass
+    is_active = hasattr(item, "_highlight_val")
+    item._highlight_val = 1
+    if not is_active:
+        item.after(HIGHLIGHT_RATE, lambda: _update_highlight(item))
 
 class InputEditor(tkinter.Frame):
     def __init__(self, parent, editor_factory, n, cb):
@@ -143,7 +174,6 @@ class ProfileBuilder(tkinter.Frame):
         self._plugin_var = tkinter.StringVar
         self._plugin_selector = tkinter.ttk.Combobox(self._button_frame, values=teleop_lib.plugins.list_plugins()+[""], textvariable=self._plugin_var)
         self._plugin_selector.bind("<<ComboboxSelected>>", self._update_plugin)
-        self._plugin_lock = threading.Lock()
 
         self._save_button = tkinter.Button(self._button_frame, text="Save", command=self._save)
         self._save_button.pack(side=tkinter.TOP)
@@ -156,11 +186,18 @@ class ProfileBuilder(tkinter.Frame):
 
         self._input_config = {}
         self._input_profile = None
-        self._profile_lock = threading.Lock()
 
+        self._building = False
+
+        self._msg_queue = queue.Queue(maxsize=1) # drop old messages
         self._sub = rospy.Subscriber("joy", Joy, self._joy_cb, queue_size=1)
+        self._poll_for_msgs()
+
 
     def build(self):
+        if self._label is not None:
+            self._label.destroy()
+
         self._axes_editor = InputEditor(self._data_frame, AxisEditor, self._ax_size, lambda v: self._config_changed("axes", v))
         self._button_editor = InputEditor(self._data_frame, ButtonEditor, self._btn_size, lambda v: self._config_changed("buttons", v))
 
@@ -183,12 +220,7 @@ class ProfileBuilder(tkinter.Frame):
 
     def _config_changed(self, input, index, config):
         self._input_config[input][index] = config
-        new_profile = teleop_lib.input_profile.build_profile(self._input_config)
-        with self._profile_lock:
-            # variable assignment is probably atomic but doesn't seem to be guaranteed in the spec
-            # so just use a lock for safety
-            # hopefully (almost certainly) this won't lag the ui
-            self._input_profile = new_profile  
+        self._input_profile = teleop_lib.input_profile.build_profile(self._input_config) 
 
     def _update_plugin(self, _):
         plugin_cls = teleop_lib.plugins.get_plugin(self._plugin_var.get())
@@ -197,37 +229,55 @@ class ProfileBuilder(tkinter.Frame):
         with self._plugin_lock:
             self._plugin = plugin
 
+    def _update_display(self, msg):
+        self._axes_editor.update_vals(msg.axes)
+        self._button_editor.update_vals(msg.buttons)
+
     def _joy_cb(self, msg):
-        if self._label is not None:
+        try:
+            self._msg_queue.put_nowait(msg)
+        except queue.Full:
+            pass
+
+    def _poll_for_msgs(self):
+        try:
+            msg = self._msg_queue.get_nowait()
+        except queue.Empty:
+            pass
+        else:
+            self._joy_event_cb(msg)
+        self.after(100, self._poll_for_msgs)      
+
+    def _joy_event_cb(self, msg):
+
+        if not self._building:
+            self._building = True
             # first init
             self._ax_size = len(msg.axes)
             self._btn_size = len(msg.buttons)
-            self._label.destroy()
-            self._label = None
-
             self.build()
         else:
             if len(msg.axes) != self._ax_size or len(msg.buttons) != self._btn_size:
                 rospy.logwarn(f"Different lengths detected for controller! Was {self._ax_size} axes, {self._btn_size} buttons; now {len(msg.axes)} axes, {len(msg.buttons)} buttons")
                 # TODO: do we auto reconfigure? add a button to reconfigure? expect ppl to quit + rerun?
             else:
-                self._axes_editor.update_vals(msg.axes)
-                self._button_editor.update_vals(msg.buttons)
+                self._update_display(msg)
 
-        with self._profile_lock:
-            cmd = self._input_profile.process_input(msg)
+        cmd = self._input_profile.process_input(msg)
 
-        plugin = None
-        with self._plugin_lock:
-            plugin = self._plugin
-        if plugin is not None:
-            plugin.do_command(cmd)
+        if self._plugin is not None:
+            self._plugin.do_command(cmd)
 
 if __name__ == "__main__":
     rospy.init_node("profile_builder", anonymous=True)
     root = tkinter.Tk()
     profile_builder = ProfileBuilder(root)
-    root.mainloop()
+
+    ### HAX -- FOR TESTING ONLY
+    profile_builder._plugin = teleop_lib.plugins.get_plugin("publisher")()
+
+
+    # root.mainloop()
         
 
 
