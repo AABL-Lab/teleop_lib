@@ -1,13 +1,19 @@
 
 _registry = dict()
 
-from .gen2_robot import Gen2Plugin
-_registry["gen2"] = gen2_robot.Gen2Plugin
+try:
+    from .gen2_robot import Gen2Plugin
+    _registry["gen2"] = gen2_robot.Gen2Plugin
+except ImportError:
+    pass
 
-from .publisher import PublisherPlugin
-_registry["publisher"] = PublisherPlugin
+try:
+    from .publisher import PublisherPlugin
+    _registry["publisher"] = PublisherPlugin
+except ImportError:
+    pass
 
 def list_plugins():
-    return _registry.keys()
+    return list(_registry.keys())
 def get_plugin(key):
     return _registry[key]
