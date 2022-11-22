@@ -8,10 +8,9 @@ import tkinter.filedialog
 import tkinter.ttk
 import yaml
 
-
-
 from teleop_lib.msg import RobotCommand
 import teleop_lib.input_profile
+import teleop_lib.plugins
 
 # find some less terrible way to do this??
 AXIS_VALUES = teleop_lib.input_profile.TwistAxis.list() + [""]
@@ -140,6 +139,12 @@ class ProfileBuilder(tkinter.Frame):
         self._button_frame = tkinter.Frame(self)
         self._button_frame.pack(side=tkinter.BOTTOM, fill=tkinter.X, expand=True)
 
+        self._plugin = None
+        self._plugin_var = tkinter.StringVar
+        self._plugin_selector = tkinter.ttk.Combobox(self._button_frame, values=teleop_lib.plugins.list_plugins()+[""], textvariable=self._plugin_var)
+        self._plugin_selector.bind("<<ComboboxSelected>>", self._update_plugin)
+        self._plugin_lock = threading.Lock()
+
         self._save_button = tkinter.Button(self._button_frame, text="Save", command=self._save)
         self._save_button.pack(side=tkinter.TOP)
 
@@ -185,6 +190,13 @@ class ProfileBuilder(tkinter.Frame):
             # hopefully (almost certainly) this won't lag the ui
             self._input_profile = new_profile  
 
+    def _update_plugin(self, _):
+        plugin_cls = teleop_lib.plugins.get_plugin(self._plugin_var.get())
+        plugin = plugin_cls()
+
+        with self._plugin_lock:
+            self._plugin = plugin
+
     def _joy_cb(self, msg):
         if self._label is not None:
             # first init
@@ -205,7 +217,11 @@ class ProfileBuilder(tkinter.Frame):
         with self._profile_lock:
             cmd = self._input_profile.process_input(msg)
 
-        # TODO: send cmd to selectable plugin
+        plugin = None
+        with self._plugin_lock:
+            plugin = self._plugin
+        if plugin is not None:
+            plugin.do_command(cmd)
 
 if __name__ == "__main__":
     rospy.init_node("profile_builder", anonymous=True)
