@@ -13,6 +13,8 @@ try:
 except ImportError:
     pass
 
+def register_plugin(name, cls):
+    _registry[name] = cls
 def list_plugins():
     return list(_registry.keys())
 def get_plugin(key):
