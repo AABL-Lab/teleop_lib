@@ -16,6 +16,7 @@
     of the robot's eef. 
 """
 
+import copy
 import numpy as np
 import yaml
 
@@ -61,13 +62,13 @@ def AXIS_Z(msg, val):
     msg.linear.z = val
 @TwistAxis
 def AXIS_ROLL(msg, val):
-    msg.angular.roll = val
+    msg.angular.x = val
 @TwistAxis
 def AXIS_PITCH(msg, val):
-    msg.angular.pitch = val
+    msg.angular.y = val
 @TwistAxis
 def AXIS_YAW(msg, val):
-    msg.angular.yaw = val
+    msg.angular.z = val
 
     
 
@@ -114,7 +115,6 @@ class FixedInputProfile:
                 val = 0
             else:
                 val = ax * cfg.get("scale", 1)
-            print(cfg["output"].__class__)
             cfg["output"](cmd.twist, val)
 
         for btn, cfg in zip(joy.buttons, self._config["buttons"]):
@@ -137,13 +137,16 @@ class ModalControlMap:
         return cmd
 
 def build_profile(config):
+    new_config = copy.deepcopy(config)
     if "axes" not in config:
-        config["axes"] = []
+        new_config["axes"] = []
     if "buttons" not in config:
-        config["buttons"] = []
+        new_config["buttons"] = []
 
-    for ax in config["axes"]:
+    for ax in new_config["axes"]:
         output = ax.get("output", None)
+        if isinstance(output, TwistAxis) or output is None:
+            continue
         try:
             axis = TwistAxis.get(output)
         except KeyError:
@@ -151,14 +154,16 @@ def build_profile(config):
             pass
         ax["output"] = axis
 
-    for btn in config["buttons"]:
+    for btn in new_config["buttons"]:
         output = btn.get("output", None)
+        if output is None:
+            continue
         try:
             btn["output"] = getattr(RobotCommand, output)
         except AttributeError:
             btn["output"] = None
 
-    return FixedInputProfile(config)
+    return FixedInputProfile(new_config)
 
 
 
