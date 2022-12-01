@@ -14,5 +14,5 @@ class Gen2Plugin:
         if cmd.command == RobotCommand.STOP_COMMAND:
             self._robot.stop()
         else:
-            self._robot.send_velocity(cmd.twist)
+            self._robot.set_velocity(cmd.twist)
 
