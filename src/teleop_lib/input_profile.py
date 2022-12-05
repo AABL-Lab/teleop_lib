@@ -41,8 +41,8 @@ class InputProfile:
         # self.linear_scale = linear_scale
         # self.angular_scale = angular_scale
         # self.deadzone = deadzone
-        self.rate = 1000
-        self.joy_sub = rospy.Subscriber("joy", Joy, self.joy_callback)
+        self.rate = 100
+        self.joy_sub = rospy.Subscriber("joy_orig", Joy, self.joy_callback)
         self.twist_pub = rospy.Publisher("joy_command", Twist, queue_size=10)
         self.twist_msg = Twist()
 
@@ -86,6 +86,7 @@ class InputProfile:
         # Publish the twist message
         self.twist_pub.publish(self.twist_msg)
         buttons = Int32MultiArray()
+        print("akoak")
         buttons.data = data.buttons
         #print(buttons.data)
         self.button_pub.publish(buttons)

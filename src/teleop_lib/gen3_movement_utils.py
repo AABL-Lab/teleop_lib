@@ -63,6 +63,9 @@ class Arm:
             self.clear_faults = rospy.ServiceProxy(
                 clear_faults_full_name, Base_ClearFaults)
 
+            self.stop_publisher = rospy.Publisher(
+                "/my_gen3/in/stop", std_msgs.msg.Empty, queue_size=1, latch=True)
+                
             read_action_full_name = '/' + self.robot_name + '/base/read_action'
             rospy.wait_for_service(read_action_full_name)
             self.read_action = rospy.ServiceProxy(
@@ -983,8 +986,8 @@ class Arm:
         def velocity_command(values, duration):
             cartesian_vel_publisher = rospy.Publisher(
                 "/my_gen3/in/cartesian_velocity", TwistCommand, queue_size=1, latch=True)
-            stop_publisher = rospy.Publisher(
-                "/my_gen3/in/stop", std_msgs.msg.Empty, queue_size=1, latch=True)
+            #stop_publisher = rospy.Publisher(
+            #    "/my_gen3/in/stop", std_msgs.msg.Empty, queue_size=1, latch=True)
             empty_message = std_msgs.msg.Empty()
             cartesian_command = TwistCommand()
 
@@ -1011,7 +1014,7 @@ class Arm:
             # print(cartesian_command)
             cartesian_vel_publisher.publish(cartesian_command)
             time.sleep(duration)
-            stop_publisher.publish(empty_message)
+            #self.stop_publisher.publish(empty_message)
             # this sleep is necessary to process the sleep before the next potential command
             #rospy.sleep(.1)
             return 1
@@ -1025,6 +1028,12 @@ class Arm:
         else:
             return velocity_command(values, duration)
 
+    def stop_arm(self):
+        """
+        Stops the arm from moving
+        """
+        self.stop_publisher.publish()
+        return
     def goto_joint_pose_sim(self, joints):
         """              
         Sends the arm to the specified joint angles (in radians).

@@ -12,11 +12,13 @@ except:
     pass
 
 arm = Arm()
-#arm.home_arm()
+# arm.home_arm()
 controller = ControllerInterface()
+rospy.on_shutdown(arm.stop_arm)
+
 while not rospy.is_shutdown():
     cmd = controller.get_user_command()
-    arm.cartesian_velocity_command([cmd.linear.x, cmd.linear.y, cmd.linear.z, cmd.angular.z, cmd.angular.x, \
-        cmd.angular.y], duration=.1, radians=True)
+    arm.cartesian_velocity_command([.5*cmd.linear.x, .5*cmd.linear.y, .5*cmd.linear.z, cmd.angular.z, cmd.angular.x,
+                                    cmd.angular.y], duration=.1, radians=True)
     #buttons = controller.get_user_buttons()
-    #print(buttons)
+    # print(buttons)
