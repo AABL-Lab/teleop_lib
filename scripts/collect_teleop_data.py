@@ -19,7 +19,8 @@ class DragDropListbox(tkinter.Listbox):
         super().__init__(master, kw)
         self.bind('<Button-1>', self.setCurrent)
         self.bind('<B1-Motion>', self.shiftSelection)
-        self.bind("<Delete> <BackSpace>", self._delete_current)
+        self.bind("<BackSpace>", self._delete_current)
+        self.bind("<Delete>", self._delete_current)
         self.curIndex = None
 
     def setCurrent(self, event):
@@ -38,7 +39,7 @@ class DragDropListbox(tkinter.Listbox):
             self.insert(i-1, x)
             self.curIndex = i
 
-    def _delete_current(self):
+    def _delete_current(self, evt):
         self.delete(self.curselection())
 
 
