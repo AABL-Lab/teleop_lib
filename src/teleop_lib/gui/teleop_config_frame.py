@@ -115,8 +115,11 @@ def _get_plugin(config):
     if "plugin" not in config:
         return None
     else:
-        plugin_fn = teleop_lib.plugins.get_plugin(config["plugin"])
-        return plugin_fn(*config.get("plugin_args", []))
+        try:
+            plugin_fn = teleop_lib.plugins.get_plugin(config["plugin"])
+            return plugin_fn(*config.get("plugin_args", []))
+        except KeyError:
+            return None
 
 def get_teleop_info(config):
     if TELEOP_CONFIG_NAME not in config:
