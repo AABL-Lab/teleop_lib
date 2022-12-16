@@ -7,6 +7,10 @@ int8 START_ACTION_COMMAND=12
 int8 STOP_ACTION_COMMAND=13
 int8 CHANGE_MODE_COMMAND=14
 
+int8 OPEN_GRIPPER = 20
+int8 CLOSE_GRIPPER = 21
+
 int8 command
 geometry_msgs/Twist twist
+float64 gripper_velocity
 

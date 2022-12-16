@@ -53,22 +53,25 @@ yaml.add_representer(TwistAxis, TwistAxis.axis_representer)
 
 @TwistAxis
 def AXIS_X(msg, val):
-    msg.linear.x = val
+    msg.twist.linear.x = val
 @TwistAxis
 def AXIS_Y(msg, val):
-    msg.linear.y = val
+    msg.twist.linear.y = val
 @TwistAxis
 def AXIS_Z(msg, val):
-    msg.linear.z = val
+    msg.twist.linear.z = val
 @TwistAxis
 def AXIS_ROLL(msg, val):
-    msg.angular.x = val
+    msg.twist.angular.x = val
 @TwistAxis
 def AXIS_PITCH(msg, val):
-    msg.angular.y = val
+    msg.twist.angular.y = val
 @TwistAxis
 def AXIS_YAW(msg, val):
-    msg.angular.z = val
+    msg.twist.angular.z = val
+@TwistAxis
+def AXIS_GRIPPER(msg, val):
+    msg.gripper_velocity = val
 
     
 
@@ -115,7 +118,7 @@ class FixedInputProfile:
                 val = 0
             else:
                 val = ax * cfg.get("scale", 1)
-            cfg["output"](cmd.twist, val)
+            cfg["output"](cmd, val)
 
         for btn, cfg in zip(joy.buttons, self._config["buttons"]):
             if "output" not in cfg or cfg["output"] is None:
