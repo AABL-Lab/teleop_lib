@@ -132,11 +132,17 @@ class ModalControlMap:
     def __init__(self, modes):
         self._modes = modes
         self._mode = 0
+        self._mode_changing = False
 
     def process_input(self, joy):
         cmd = self._modes[self._mode].process_input(joy)
+
         if cmd.command == RobotCommand.CHANGE_MODE_COMMAND:
-            self._mode = (self._mode + 1) % len(self._modes)
+            if not self._mode_changing:
+                self._mode = (self._mode + 1) % len(self._modes)
+            self._mode_changing = True
+        else:
+            self._mode_changing = False
         return cmd
 
 def build_profile(config):
