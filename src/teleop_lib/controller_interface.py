@@ -32,7 +32,7 @@ class ControllerInterface:
         self.latest_commmad = Twist()
         self.num_buttons = num_buttons
         self.latest_buttons = np.array(np.zeros(self.num_buttons))
-        self.input_profile_sub = rospy.Subscriber("joy_command", Twist, self.user_input_callback) # subscriber for joustick input
+        self.input_profile_sub = rospy.Subscriber("joy_command", Twist, self.user_input_callback) # subscriber for joystick input
         self.button_sub = rospy.Subscriber("joy_button", Joy, self.user_button_callback)
         #self.dynamic_client = dynamic_reconfigure.client.Client(InputProfiles, timeout=30, config_callback=self.dynamic_callback)
 
