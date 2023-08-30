@@ -1,3 +1,5 @@
+std_msgs/Header header
+
 int8 VELOCITY_COMMAND=1
 int8 STOP_COMMAND=-1
 
