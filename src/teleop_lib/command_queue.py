@@ -44,27 +44,25 @@ class MaxMsgHandler:
 
 
 
-class RobotCommandSummaryFilter:
-    def __init__(self, *args, **handlers):
-        self._cache = message_filters.Cache(*args)
-        self._policies = collections.defaultdict(LatestMsgHandler, 
-                                                 {getattr(RobotCommand, k): v for k, v in handlers.items()})
+class RobotCommandSummaryFilter(message_filters.Cache):
+    def __init__(self, *args, **kwargs):
+        self._policies = collections.defaultdict(LatestMsgHandler)
+        self._policies["VELOCITY_COMMAND"] = MaxMsgHandler()
+        
+        for arg in kwargs.keys():
+            if hasattr(RobotCommand, arg):
+                self._policies[getattr(RobotCommand, arg)] = kwargs[arg]
+                del kwargs[arg]
+
+        super().__init__(*args, **kwargs)
 
     def get(self, start_time, end_time):
-        msgs = self._cache.get_between(start_time, end_time)
+        msgs = self.get_between(start_time, end_time)
         msg_by_type = {}
         for msg in msgs:
             if msg.command not in msg_by_type:
                 msg_by_type[msg.command] = []
             msg_by_type[msg.command].append(msg)
         return {i: self._policies[i](msg_by_type[i]) for i in sorted(msg_by_type.keys())}
-        
-    @classmethod
-    def build(cls, policy, period=0.1):
-        sub = message_filters.Subscriber("joy", Joy)
-        filt = InputPolicyFilter(sub, policy)
-        queue_size = 100 * period * 2 # estimate 100 Hz messages and keep 2 periods worth
-        filter = cls(filt, queue_size, VELOCITY_COMMAND=MaxMsgHandler())
-        # keep subs alive
-        filter.__connections = [sub, filt]
-        return filt
+
+ 
