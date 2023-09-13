@@ -109,7 +109,7 @@ class FixedInputProfile:
         self._config = config
 
     def process_input(self, joy):
-        cmd = RobotCommand(header=joy.header)
+        cmd = RobotCommand(header=joy.header, command=RobotCommand.VELOCITY_COMMAND)
 
         for ax, cfg in zip(joy.axes, self._config["axes"]):
             if "output" not in cfg or cfg["output"] is None:

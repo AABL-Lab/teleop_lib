@@ -34,7 +34,7 @@ class MaxMsgHandler:
                                 msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z]
                                 for msg in msgs])
         imax = np.argmax(np.abs(all_twists), axis=0)
-        maxvals = all_twists[imax]
+        maxvals = all_twists[imax, list(range(6))]
 
         msg.twist.linear = Vector3(*maxvals[:3])
         msg.twist.angular = Vector3(*maxvals[3:])
@@ -47,7 +47,7 @@ class MaxMsgHandler:
 class RobotCommandSummaryFilter(message_filters.Cache):
     def __init__(self, *args, **kwargs):
         self._policies = collections.defaultdict(LatestMsgHandler)
-        self._policies["VELOCITY_COMMAND"] = MaxMsgHandler()
+        self._policies[RobotCommand.VELOCITY_COMMAND] = MaxMsgHandler()
         
         for arg in kwargs.keys():
             if hasattr(RobotCommand, arg):
@@ -57,12 +57,13 @@ class RobotCommandSummaryFilter(message_filters.Cache):
         super().__init__(*args, **kwargs)
 
     def get(self, start_time, end_time):
-        msgs = self.get_between(start_time, end_time)
+        msgs = self.getInterval(start_time, end_time)
         msg_by_type = {}
         for msg in msgs:
             if msg.command not in msg_by_type:
                 msg_by_type[msg.command] = []
             msg_by_type[msg.command].append(msg)
+        print({k: len(v) for k,v in msg_by_type.items()})
         return {i: self._policies[i](msg_by_type[i]) for i in sorted(msg_by_type.keys())}
 
  
