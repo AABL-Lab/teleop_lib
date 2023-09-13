@@ -1,4 +1,6 @@
 
+import functools
+
 _registry = dict()
 
 try:
@@ -12,6 +14,15 @@ try:
     _registry["publisher"] = PublisherPlugin
 except ImportError:
     pass
+
+try:
+    from .gen3_robot import Gen3Plugin
+except ImportError:
+    raise
+    pass
+else:
+    _registry['gen3'] = functools.partial(Gen3Plugin, "gen3")
+    _registry["gen3_lite"] = functools.partial(Gen3Plugin, "gen3_lite")
 
 def register_plugin(name, cls):
     _registry[name] = cls
