@@ -13,6 +13,7 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
+from std_msgs.msg import Int32MultiArray
 import dynamic_reconfigure.client
 #from teleop_lib.cfg import InputProfiles
 
@@ -33,7 +34,7 @@ class ControllerInterface:
         self.num_buttons = num_buttons
         self.latest_buttons = np.array(np.zeros(self.num_buttons))
         self.input_profile_sub = rospy.Subscriber("joy_command", Twist, self.user_input_callback) # subscriber for joystick input
-        self.button_sub = rospy.Subscriber("joy_button", Joy, self.user_button_callback)
+        self.button_sub = rospy.Subscriber("joy_button", Int32MultiArray, self.user_button_callback)
         #self.dynamic_client = dynamic_reconfigure.client.Client(InputProfiles, timeout=30, config_callback=self.dynamic_callback)
 
     def user_input_callback(self, data):
@@ -45,7 +46,6 @@ class ControllerInterface:
         self.latest_commmad.angular.z = data.angular.z
 
     def user_button_callback(self, data):
-        print(data)
         self.latest_buttons = np.array(data.data)
 
     def dynamic_callback(self, config):
