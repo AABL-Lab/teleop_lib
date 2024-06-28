@@ -1,0 +1,22 @@
+axes:
+- deadzone: 0.05
+  output: AXIS_X
+  scale: 1.0
+- deadzone: 0.05
+  output: AXIS_Y
+  scale: 1.0
+- deadzone: 0.05
+  output: AXIS_Z
+  scale: 1.0
+- deadzone: 0.05
+  output: AXIS_PITCH
+  scale: 1.0
+- deadzone: 0.05
+  output: AXIS_ROLL
+  scale: 1.0
+- deadzone: 0.05
+  output: AXIS_YAW
+  scale: -1.0
+buttons:
+- output: CLOSE_GRIPPER
+- output: OPEN_GRIPPER

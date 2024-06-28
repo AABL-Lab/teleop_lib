@@ -49,8 +49,8 @@ def main():
     print("build basic runner")
     runner.add_config_frame(TeleopConfigFrame, "Teleoperation")
     logging_frame = runner.add_config_frame(LoggingFrame, "Logging")
-    logging_frame.add_logger_frame(study_runner.frames.loggers.rosbag_recorder.RosbagRecorderConfigFrame, side="right")
-    logging_frame.add_logger(study_runner.frames.loggers.rosbag_recorder.ROSBAG_RECORDER_CONFIG_NAME)
+    # logging_frame.add_logger_frame(study_runner.frames.loggers.rosbag_recorder.RosbagRecorderConfigFrame, side="right")
+    # logging_frame.add_logger(study_runner.frames.loggers.rosbag_recorder.ROSBAG_RECORDER_CONFIG_NAME)
     print("running...")
     study_runner.runner.main(root)
 
