@@ -21,7 +21,6 @@ class InputPolicyFilter(message_filters.SimpleFilter):
     def process(self, msg):
         self.signalMessage(self._policy.process_input(msg))
 
-
 class LatestMsgHandler:
     def __call__(self, msgs):
         return msgs[-1]
@@ -67,3 +66,50 @@ class RobotCommandSummaryFilter(message_filters.Cache):
         return {i: self._policies[i](msg_by_type[i]) for i in sorted(msg_by_type.keys())}
 
  
+class LimitVelocityFilter(message_filters.SimpleFilter):
+    __registry = {}
+    def __init__(self, f=None, name=None):
+        super().__init__()
+        self._projection_matrix = np.eye(6)
+        if f is not None:
+            self.connectInput(f)
+
+        if name is None:
+            i = len(self.__class__.__registry)
+            while True:
+                name = f"LVF{i}"
+                if name not in self.__class__.__registry:
+                    break
+                i = i + 1
+
+        self.__class__.__registry[name] = self
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    def connectInput(self, f):
+        self.incoming_connection = f.registerCallback(self.process)
+
+    def set_projection(self, projection_matrix):
+        self._projection_matrix = np.atleast_2d(projection_matrix).reshape((6, 6)).astype(float)
+
+    def process(self, msg):
+
+        twist = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z, 
+            msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z])
+        newtwist = self._projection_matrix @ twist
+
+        newmsg = copy.deepcopy(msg)
+        newmsg.twist.linear = Vector3(*newtwist[:3])
+        newmsg.twist.angular = Vector3(*newtwist[3:])
+                                
+        self.signalMessage(newmsg)
+
+    @classmethod
+    def load(cls, name):
+        return cls.__registry[name]
+
+    
+
