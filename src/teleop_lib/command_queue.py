@@ -96,16 +96,16 @@ class LimitVelocityFilter(message_filters.SimpleFilter):
         self._projection_matrix = np.atleast_2d(projection_matrix).reshape((6, 6)).astype(float)
 
     def process(self, msg):
+        if msg.command == RobotCommand.VELOCITY_COMMAND:
 
-        twist = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z, 
-            msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z])
-        newtwist = self._projection_matrix @ twist
+            twist = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z, 
+                msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z])
+            newtwist = self._projection_matrix @ twist
 
-        newmsg = copy.deepcopy(msg)
-        newmsg.twist.linear = Vector3(*newtwist[:3])
-        newmsg.twist.angular = Vector3(*newtwist[3:])
-                                
-        self.signalMessage(newmsg)
+            msg.twist.linear = Vector3(*newtwist[:3])
+            msg.twist.angular = Vector3(*newtwist[3:])
+
+        self.signalMessage(msg)
 
     @classmethod
     def load(cls, name):

@@ -10,6 +10,7 @@ import study_runner
 from study_runner.frames.logging import LoggingFrame, RunLogging
 import study_runner.frames.loggers
 from teleop_lib.gui.teleop_config_frame import TeleopConfigFrame, get_teleop_info
+from teleop_lib.gui.limit_velocity_frame import LimitVelocityFrame, get_limiter
 import tkinter
 
 # TODO: do something smarter with this
@@ -28,15 +29,15 @@ class AsyncSubscriber:
 
 async def run_teleop(config, status_cb):
     plugin, profile = get_teleop_info(config)
+    limiter = get_limiter(config)
     sub = AsyncSubscriber("/joy", sensor_msgs.msg.Joy)
     with RunLogging(config):
         try:
             while not rospy.is_shutdown():
-                print("waiting for msg")
                 msg = await sub.get()
-                print("got msg")
                 cmd = profile.process_input(msg)
-                plugin.do_command(cmd)
+                newcmd = limiter.process(cmd)
+                plugin.do_command(newcmd)
         finally:
             sub.close()
 
@@ -48,9 +49,10 @@ def main():
     runner = study_runner.StudyRunner(root, run_teleop)
     print("build basic runner")
     runner.add_config_frame(TeleopConfigFrame, "Teleoperation")
-    logging_frame = runner.add_config_frame(LoggingFrame, "Logging")
-    logging_frame.add_logger_frame(study_runner.frames.loggers.rosbag_recorder.RosbagRecorderConfigFrame, side="right")
-    logging_frame.add_logger(study_runner.frames.loggers.rosbag_recorder.ROSBAG_RECORDER_CONFIG_NAME)
+    runner.add_config_frame (LimitVelocityFrame, "Velocity")
+    # logging_frame = runner.add_config_frame(LoggingFrame, "Logging")
+    # logging_frame.add_logger_frame(study_runner.frames.loggers.rosbag_recorder.RosbagRecorderConfigFrame, side="right")
+    # logging_frame.add_logger(study_runner.frames.loggers.rosbag_recorder.ROSBAG_RECORDER_CONFIG_NAME)
     print("running...")
     study_runner.runner.main(root)
 
