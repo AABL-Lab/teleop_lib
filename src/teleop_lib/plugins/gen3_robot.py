@@ -3,15 +3,21 @@ from teleop_lib.msg import RobotCommand
 
 class Gen3Plugin:
     def __init__(self, arm_name):
-        self._robot = armpy.initialize("gen3")
+        self._robot = armpy.initialize(arm_name)
     def do_command(self, cmd):
         if cmd.command == RobotCommand.STOP_COMMAND:
+            print(cmd)
             self._robot.stop()
             # TODO: stop gripper
         elif cmd.command == RobotCommand.OPEN_GRIPPER:
+            print(cmd)
             self._robot.open_gripper(block=False)
         elif cmd.command == RobotCommand.CLOSE_GRIPPER:
+            print(cmd)
             self._robot.close_gripper(block=False)
+        elif cmd.command == RobotCommand.GO_HOME_COMMAND:
+            print(cmd)
+            self._robot.home_arm()
         else:
             cmd = [
                 cmd.twist.linear.x, cmd.twist.linear.y, cmd.twist.linear.z,
