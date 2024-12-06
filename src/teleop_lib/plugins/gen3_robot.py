@@ -2,6 +2,7 @@ import armpy
 from teleop_lib.msg import RobotCommand
 
 class Gen3Plugin:
+    GRIPPER_INCREMENT = 0.1
     def __init__(self, arm_name):
         self._robot = armpy.initialize(arm_name)
     def do_command(self, cmd):
@@ -10,10 +11,14 @@ class Gen3Plugin:
             self._robot.stop()
             # TODO: stop gripper
         elif cmd.command == RobotCommand.OPEN_GRIPPER:
-            print(cmd)
+            # print(cmd)
             self._robot.open_gripper(block=False)
+            # self._robot.send_gripper_command(self.GRIPPER_INCREMENT, mode='speed', duration=1, block=False)
+            # self._robot.send_gripper_command(self.GRIPPER_INCREMENT, relative=True, block=False)
         elif cmd.command == RobotCommand.CLOSE_GRIPPER:
-            print(cmd)
+            # print(cmd)
+            # self._robot.send_gripper_command(-self.GRIPPER_INCREMENT, mode='speed', duration=1, block=False)
+            # self._robot.send_gripper_command(-self.GRIPPER_INCREMENT, relative=True, block=False)
             self._robot.close_gripper(block=False)
         elif cmd.command == RobotCommand.GO_HOME_COMMAND:
             print(cmd)
