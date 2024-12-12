@@ -117,6 +117,7 @@ def _get_plugin(config):
     else:
         try:
             plugin_fn = teleop_lib.plugins.get_plugin(config["plugin"])
+            print(f'{config.get("plugin_args", [])=}')
             return plugin_fn(*config.get("plugin_args", []))
         except KeyError:
             return None
@@ -126,6 +127,8 @@ def get_teleop_info(config):
         return None
     else:
         config = config[TELEOP_CONFIG_NAME]
+        for k,v in config.items():
+            print(f"\t{k} {v.keys() if hasattr(v, 'keys') else v}")
         return _get_plugin(config), _get_profile(config)
 
 

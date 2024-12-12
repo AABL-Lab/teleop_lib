@@ -62,7 +62,7 @@ class RobotCommandSummaryFilter(message_filters.Cache):
             if msg.command not in msg_by_type:
                 msg_by_type[msg.command] = []
             msg_by_type[msg.command].append(msg)
-        print({k: len(v) for k,v in msg_by_type.items()})
+        # print({k: len(v) for k,v in msg_by_type.items()})
         return {i: self._policies[i](msg_by_type[i]) for i in sorted(msg_by_type.keys())}
 
  

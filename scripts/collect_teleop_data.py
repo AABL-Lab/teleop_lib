@@ -36,7 +36,9 @@ async def run_teleop(config, status_cb):
             while not rospy.is_shutdown():
                 msg = await sub.get()
                 cmd = profile.process_input(msg)
+                print(f'{cmd=}')
                 newcmd = limiter.process(cmd)
+                print(f'{newcmd=}')
                 plugin.do_command(newcmd)
         finally:
             sub.close()
