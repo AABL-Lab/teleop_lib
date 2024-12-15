@@ -3,11 +3,13 @@ from teleop_lib.msg import RobotCommand
 from kortex_driver.msg import BaseCyclic_Feedback
 
 DEFAULT_CONSTRAINTS = {
-    'x': [0.3, 1.0],
-    'y': [-0.3, 0.3],
-    'z': [0., 0.6],
+    'x': [0.3, 0.8],
+    'y': [-0.25, 0.25],
+    'z': [0.05, 0.6],
     'buffer_multiplier': 2
 }
+
+VELOCITY_CAP = 0.11
 
 class Gen3Plugin:
     GRIPPER_INCREMENT = 0.1
@@ -54,6 +56,10 @@ class Gen3Plugin:
 
             # If we have a current_state message. Block movement within bounds.
             vx, vy, vz, vr, vp, vyaw = cmd.twist.linear.x, cmd.twist.linear.y, cmd.twist.linear.z, cmd.twist.angular.x, cmd.twist.angular.y, cmd.twist.angular.z
+            if abs(vx) > VELOCITY_CAP: vx = VELOCITY_CAP if vx > 0 else -VELOCITY_CAP
+            if abs(vy) > VELOCITY_CAP: vy = VELOCITY_CAP if vy > 0 else -VELOCITY_CAP
+            if abs(vz) > VELOCITY_CAP: vz = VELOCITY_CAP if vz > 0 else -VELOCITY_CAP
+
             if self._constraints and current_state:
                 newx = current_state.base.tool_pose_x + vx * self.buffer_multiplier * self.CARTESIAN_VELOCITY_DURATION
                 newy = current_state.base.tool_pose_y + vy * self.buffer_multiplier * self.CARTESIAN_VELOCITY_DURATION
