@@ -3,10 +3,10 @@ from teleop_lib.msg import RobotCommand
 from kortex_driver.msg import BaseCyclic_Feedback
 
 DEFAULT_CONSTRAINTS = {
-    'x': [0.3, 0.8],
-    'y': [-0.25, 0.25],
-    'z': [0.05, 0.6],
-    'buffer_multiplier': 2
+    'x': (0.3, 0.8),
+    'y': (-0.25, 0.25),
+    'z': (0.015, 0.6),
+    'buffer_multiplier': 1.0
 }
 
 VELOCITY_CAP = 0.11
@@ -17,7 +17,7 @@ class Gen3Plugin:
     CARTESIAN_VELOCITY_DURATION = 0.1
     def __init__(self, arm_name, constraints=None):
         self._robot = armpy.initialize(arm_name)
-        self._constraints = constraints if constraints else DEFAULT_CONSTRAINTS
+        self._constraints = DEFAULT_CONSTRAINTS
         if self._constraints:
             self.minx, self.maxx = self._constraints['x']
             self.miny, self.maxy = self._constraints['y']
@@ -66,7 +66,7 @@ class Gen3Plugin:
                 newz = current_state.base.tool_pose_z + vz * self.buffer_multiplier * self.CARTESIAN_VELOCITY_DURATION
                 if (newx < self.minx and vx < 0) or (newx > self.maxx and vx > 0): vx = 0; print(f"WARN: constraining zeroing x velocity. {newx=:1.2f}")
                 if (newy < self.miny and vy < 0) or (newy > self.maxy and vy > 0): vy = 0; print(f"WARN: constraining zeroing y velocity. {newy=:1.2f}")
-                if (newz < self.minz and vz < 0) or (newz > self.maxz and vz > 0): vz = 0; print(f"WARN: constraining zeroing z velocity. {newz=:1.2f}")
+                if (newz < self.minz and vz < 0) or (newz > self.maxz and vz > 0): print(f"WARN: constraining zeroing z velocity. {newz=:1.2f} {vz=:1.2f}"); vz = 0; 
 
             cmd = [vx,vy,vz,vr,vp,vyaw]
             self._robot.cartesian_velocity_command(cmd, duration=self.CARTESIAN_VELOCITY_DURATION, block=False, radians=True)
